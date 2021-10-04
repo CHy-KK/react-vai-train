@@ -2,11 +2,11 @@ import numpy as np
 import json
 
 mList = {'matrix':[]}
-length = 50
+length = 15
 count = 5
 for i in range(count):
     rm = np.random.randint(0, 2, (length,length))
-    for i in range (length // 10):
+    for j in range (length // 10):
         tmp = np.random.randint(0, 2, (length, length))
         rm -= tmp
     rm = np.triu(rm)

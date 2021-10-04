@@ -19,7 +19,7 @@ const calNodeLink = (record, shape, colorMap) => {
   let nodes = [];
   let nodeprops = [];
   record.map((d, idx) => {
-    if (d != 0)
+    if (d !== 0)
       nodes.push({'index': idx});
   })
   let nodepos = JSON.parse(JSON.stringify(nodes));
@@ -80,13 +80,9 @@ const GraphRender = (props) => {
           }
           nodeprops = calNodeLink(record, shape, colorMap);
           // console.log(record);
-          console.log(nodeprops);
-          console.log(graphs[sid].link)
           netv.wipe();
-          console.log(netv);
           netv.addNodes(nodeprops);
           netv.addLinks(graphs[sid].link)
-          console.log(netv);
           netv.draw();
         }, 
         2000
