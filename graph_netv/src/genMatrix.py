@@ -24,5 +24,3 @@ for i in range(count):
     mList['matrix'].append(newlist)
 fp = open('data/matrixs' + str(length) + '_' + str(count) + '.json', 'w')
 json.dump(mList, fp)
-
-
