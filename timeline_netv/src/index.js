@@ -1,16 +1,19 @@
-import React, {lazy, useEffect, useRef} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
+import './mydiv.css'
 import reportWebVitals from './reportWebVitals';
 import datum50_5 from './data/matrixs50_5.json'
 import datum15_5 from './data/matrixs15_5.json'
 import * as d3 from 'd3'; 
-import NetV, { link, node, nodeLimit, width } from "netv";
+import NetV, { height, link, node, nodeLimit, width } from "netv";
+import { JsonInputArea } from './JsonInput';
+
 
 /**CALCULATORS
  * calculate props of graph
  */
-function calNodeLink(netv, graphs, num, leng) {
+function NodeLink(netv, graphs, num, leng) {
   const shape = {width: 200, height: 200};
   let nodeprops, linkprops;
   let lastrecord = new Array(num);
@@ -74,7 +77,6 @@ function calNodeLink(netv, graphs, num, leng) {
         record[i] = 2;
     }
     [nodeprops, linkprops] = calprops(sid, graphs[sid].link, record, shape, colorMap);
-    // console.log(nodeprops, linkprops)
     netv.addNodes(nodeprops);
     netv.addLinks(linkprops);
   }
@@ -97,7 +99,7 @@ function calNodeLink(netv, graphs, num, leng) {
   netv.addLinks(link2stay);
 }
 
-function calBipartite(netv, graphs, num, leng) {
+function Bipartite(netv, graphs, num, leng) {
   let nodeprops = []; 
   let linkprops = [];
   let nodes = new Array(num).fill(0);
@@ -163,63 +165,134 @@ const JuxtMatrix = (props) => {
   const yValue = (x, y, angle) => x * Math.sin(angle * Math.PI / 180) + y * Math.cos(angle * Math.PI / 180);
   let lineprops = [];
   let nodeprops = [];
+  let recordS = new Array(num).fill(0);
+  let recordT = new Array(num).fill(0);
   for (let sid = 0; sid < leng; sid++) {
     const angle = sid % 2 ? -135 : 45;
     const xOffset = width * (sid + 1) + padding.left;
     const yOffset = (sid % 2 ? width / Math.sqrt(2) + block : 0) + padding.top;
     const links = graphs[sid].link;
-    console.log(sid + '-------------------------------------')
+    const lastRecordT = JSON.parse(JSON.stringify(recordT));
+    const lastRecordS = JSON.parse(JSON.stringify(recordS));
+    recordS.fill(0);
+    recordT.fill(0);
     links.map((d, idx) => {
-      console.log(d.target, d.source)
+      recordS[sid % 2 ? Math.min(d.target, d.source) : Math.max(d.target, d.source)] = 1;
+      recordT[sid % 2 ? Math.max(d.target, d.source) : Math.min(d.target, d.source)] = 1;
       nodeprops.push({
         id: sid + '-node-' + idx,
-        // x: xValue(xyScale(Math.min(d.target, d.source)) + block * 1.5, xyScale(num + 1 - Math.max(d.target, d.source)) - block / 2, angle) + xOffset,
-        // y: yValue(xyScale(Math.min(d.target, d.source)) + block * 1.5, xyScale(num + 1 - Math.max(d.target, d.source)) - block / 2, angle) + yOffset,
-        x: xyScale(Math.min(d.target, d.source)) + block * 1.5 + xOffset,
-        y: xyScale(num + 1 - Math.max(d.target, d.source)) - block / 2,
-        r: block / 2 - 1
+        // (1 - 0.7) / 2 = 0.15
+        x: xyScale(sid % 2 ? num + 1 - Math.max(d.target, d.source) : Math.min(d.target, d.source)) + (sid % 2 ? - block * 0.85 : block * 1.15),  
+        y: xyScale( sid % 2 ? Math.min(d.target, d.source) : num + 1 - Math.max(d.target, d.source)) - (sid % 2 ? - block * 1.15 : block * 0.85), 
+        width: block * 0.7,
+        height: block * 0.7,
+        fill: 'rgb(70, 130, 180)',
+        transform: `translate(${xOffset}, ${yOffset}), rotate(${angle})`,
       })
-    })
+    });
+    recordS.map((d, idx) => {
+      nodeprops.push({
+        id: sid + '-source-' + idx,
+        x: 0 + (sid % 2 ? block * 0.5 : block * 0.5),
+        y: xyScale(sid % 2 ? idx : num + 1 - idx) - (sid % 2 ? - block * 1.5 : block * 0.5),
+        r: block * 0.425,
+        fill: `rgba(112, 128, 144, ${d * 0.8 + 0.15})`,
+        transform: `translate(${xOffset}, ${yOffset}), rotate(${angle})`,
+      })
+    });
+    recordT.map((d, idx) => {
+      nodeprops.push({
+        id: sid + '-target-' + idx,
+        x: xyScale( sid % 2 ? num + 1 - idx : idx) + (sid % 2 ? - block * 0.5 : block * 1.5),
+        y: 0 + (sid % 2 ? block * 0.5 : block * 0.5),
+        r: block * 0.425,
+        fill: `rgba(112, 128, 144, ${d * 0.8 + 0.15})`,
+        transform: `translate(${xOffset}, ${yOffset}), rotate(${angle})`,
+      })
+    });
+    if (sid > 0) {
+      for (let i = 0; i < num; i++) {
+        if (sid % 2) {
+          if (lastRecordT[i] === recordT[i] && recordT[i] === 1) {
+            const sourceX = xValue(xyScale(i + 1) + block * 0.5, 0 + block * 0.5, (sid - 1) % 2 ? -135 : 45) + width * sid + padding.left;
+            const sourceY = yValue(xyScale(i + 1) + block * 0.5, 0 + block * 0.5, (sid - 1) % 2 ? -135 : 45) + ((sid - 1) % 2 ? width / Math.sqrt(2) + block : 0) + padding.top;
+            const targetX = xValue(xyScale(num + 1 - i) - block * 0.5, block * 0.5, angle) + xOffset;
+            const targetY = yValue(xyScale(num + 1 - i) - block * 0.5, block * 0.5, angle) + yOffset;
+            lineprops.push({
+              id: (sid - 1) + '-' + sid + '-' + i,
+              d: `M ${sourceX} 
+                    ${sourceY} 
+                  C ${sourceX + (targetX - sourceX) * 0.33} 
+                    ${sourceY - block}
+                  , ${sourceX + (targetX - sourceX) * 0.66} 
+                    ${sourceY + block}
+                  , ${targetX} 
+                    ${targetY}`,
+              fill: 'none',
+              stroke: 'rgb(0, 191, 255)',
+              strokeWidth: 1,
+            });
+            
+          }
+        }
+        else {
+          if (lastRecordS[i] === recordS[i] && recordS[i] === 1) {
+            const sourceX = xValue(0 + block * 0.5, xyScale(num + 1 - i) - block * 0.5, (sid - 1) % 2 ? -135 : 45) + width * sid + padding.left;
+            const sourceY = yValue(0 + block * 0.5, xyScale(num + 1 - i) - block * 0.5, (sid - 1) % 2 ? -135 : 45) + ((sid - 1) % 2 ? width / Math.sqrt(2) + block : 0) + padding.top;
+            const targetX = xValue(0 + block * 0.5, xyScale(i + 1) + block * 0.5, angle) + xOffset;
+            const targetY = yValue(0 + block * 0.5, xyScale(i + 1) + block * 0.5, angle) + yOffset;
+            lineprops.push({
+              id: (sid - 1) + '-' + sid + '-' + i,
+              d: `M ${sourceX} 
+                    ${sourceY} 
+                  C ${sourceX + (targetX - sourceX) * 0.33} 
+                    ${sourceY + block}
+                  , ${sourceX + (targetX - sourceX) * 0.66} 
+                    ${sourceY - block}
+                  , ${targetX} 
+                    ${targetY}`,
+              fill: 'none',
+              stroke: 'rgb(0, 191, 255)',
+              strokeWidth: 1,
+            });
+          }
+        }
+      }
+    }
     for (let i = 0; i <= num; i++) {
       lineprops.push({
         id: sid + '-row-' + i,
-        // x1: xValue(0, xyScale(i + 1), angle) + xOffset,
-        // y1: yValue(0, xyScale(i + 1), angle) + yOffset,
-        // x2: xValue(xyScale(num + 2 - i), xyScale(i + 1), angle) + xOffset,
-        // y2: yValue(xyScale(num + 2 - i), xyScale(i + 1), angle)+ yOffset,
-        x1: 0 + xOffset,
+        x1: 0,
         y1: xyScale(i + 1),
-        x2: xyScale(num + 2 - i) + xOffset,
+        x2: xyScale(num + 2 - i),
         y2: xyScale(i + 1),
         stroke: 'rgb(0, 191, 255)',
         strokeWidth: 1,
-        transform: {}
+        transform: `translate(${xOffset}, ${yOffset}), rotate(${angle})`
       });
       lineprops.push({
         id: sid + '-col-' + i,
-        // x1: xValue(xyScale(i + 1), 0, angle) + xOffset,
-        // y1: yValue(xyScale(i + 1), 0, angle) + yOffset,
-        // x2: xValue(xyScale(i + 1), xyScale(num + 2 - i), angle) + xOffset,
-        // y2: yValue(xyScale(i + 1), xyScale(num + 2 - i), angle) + yOffset,
-        x1: xyScale(i + 1) + xOffset,
+        x1: xyScale(i + 1),
         y1: 0,
-        x2: xyScale(i + 1) + xOffset,
+        x2: xyScale(i + 1),
         y2: xyScale(num + 2 - i),
         stroke: 'rgb(0, 191, 255)',
         strokeWidth: 1,
-        
+        transform: `translate(${xOffset}, ${yOffset}), rotate(${angle})`
       });
     }
   }
-  console.log(nodeprops);
   return (
-    <svg width={2000} height={1000}>
+    <svg width={500} height={500} viewBox={'0, 0, 1000, 500'}>
       <p>This is Juxtposed Matrix</p>
-      {lineprops.map(d => (<line key={d.id} x1={d.x1} y1={d.y1} x2={d.x2} y2={d.y2} stroke={d.stroke} strokeWidth={d.strokeWidth} transform={d.transform}></line>))}
-      {/* {nodeprops.map(d => (<circle key={d.id} cx={d.x} cy={d.y} r={d.r}></circle>))} */}
+      {lineprops.map(d => d.d ?
+        (<path key={d.id} d={d.d} fill={d.fill} stroke={d.stroke} strokeWidth={d.strokeWidth}></path>)
+       : (<line key={d.id} x1={d.x1} y1={d.y1} x2={d.x2} y2={d.y2} stroke={d.stroke} strokeWidth={d.strokeWidth} transform={d.transform}></line>))}
+      {nodeprops.map(d => d.r ? 
+        (<circle key={d.id} cx={d.x} cy={d.y} r={d.r} fill={d.fill} transform={d.transform}></circle>)
+       : (<rect key={d.id} x={d.x} y={d.y} width={d.width} height={d.height} fill={d.fill} transform={d.transform}></rect>))}
     </svg>
-  );
-  
+  ); 
 }
 
 
@@ -227,45 +300,95 @@ const GraphRender = (props) => {
   const graphs = props.datum.matrix;
   const num = graphs[0].nodes;
   const leng = graphs.length;
-  
   const divRef = useRef();
-  
+  const ifdisplay = useCallback(() => {
+    if (props.graphLayout == 'juxtMatrix')
+      return 'none';
+  }, [props.graphLayout])
   useEffect(
     () => {      
-      // let div = document.getElementById('maindiv');
+      console.log(props.graphLayout)
       let div = divRef.current;
+      while (div.hasChildNodes())
+        div.removeChild(div.firstChild);
+      if (props.graphLayout == 'juxtMatrix')
+        return;
+      let childdiv = document.createElement('div');
+      div.appendChild(childdiv);
+      
+      console.log(childdiv);
+      console.log(div);
       let netv = new NetV({ 
-        container: div,
+        container: childdiv,
         nodeLimit: 1000,
         linkLimit: 3000,
-        width: 2000
+        width: 700,
+        height: 450,
       });
       if (props.graphLayout === 'nodelink')
-        calNodeLink(netv, graphs, num, leng);
+        NodeLink(netv, graphs, num, leng);
       else if (props.graphLayout === 'bipartite')
-        calBipartite(netv, graphs, num, leng);
+        Bipartite(netv, graphs, num, leng);
+      // else
+      //   childdiv.appendChild(<JuxtMatrix num={num} leng={leng} graphs={graphs} />)
         
      
       netv.on('zoom', () => { });
       netv.on('pan', () => { });
       netv.draw();
+      // console.log(div)
       // 这里wipe了就没法缩放和移动了
-      // return netv.wipe();
-    }, []
+      return;
+    }, [props.graphLayout]
   )
 
   return (
-    <div id='maindiv' ref={divRef}>
-      {props.graphLayout === 'juxtMatrix' && <JuxtMatrix num={num} leng={leng} graphs={graphs} />}
-    </div>
+    <>
+      <div id='graphdiv' ref={divRef} >
+      </div>
+      <div id='othergraph'>
+        {props.graphLayout === 'juxtMatrix' && <JuxtMatrix num={num} leng={leng} graphs={graphs} />}
+      </div>
+    </>
+    
   );
 }
 
+
+
 const Graph = () => {
   // nodelink / matrix / bipartite / juxtMatrix
-  let graphLayout = 'juxtMatrix'; 
-
-  return <GraphRender graphLayout={graphLayout} datum={datum15_5} />
+  const taref = useRef(null);
+  const btref = useRef(null);
+  const [graphLayout, setGraphLayout] = useState('juxtMatrix');
+  
+  const submit = (e) => {
+    const textarea = taref.current;
+    const input = textarea.value;
+    const config=JSON.parse(input);
+    setGraphLayout(config.graphlayout);
+    console.log(graphLayout)
+    // try {
+    //     if(typeof config == 'object' && config) {
+    //       setGraphLayout(config.graphlayout);
+    //     }
+    // } catch(e) {
+    //     alert('not json');
+    //     return false;
+    // }
+    
+  }
+  return (
+    <div id='maindiv'>
+      <div id='opdiv' className='box'>
+        <textarea id='textarea' ref={taref} defaultValue={`{"graphlayout": "juxtMatrix", "timelayout": "timeline"}`}></textarea>
+        <button id='submitbutton' onClick={(e) => submit(e)}>submit</button>
+      </div>
+      <div id='renderdiv' className='box'>
+        <GraphRender graphLayout={graphLayout} datum={datum15_5} />
+      </div>
+    </div>
+  )
 }
 
 ReactDOM.render(

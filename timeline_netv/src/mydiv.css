@@ -1,0 +1,38 @@
+#maindiv {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-wrap: wrap;
+}
+#maindiv div {
+    padding: 2%;
+}
+
+#opdiv {
+    /* background-color: #e5f1ea; */
+    border: 5px solid #686868;
+    width: 30%;
+    height: 500px;
+}
+
+#renderdiv {
+    border: 5px solid #686868;
+    width: 55%;
+    height: 500px;
+}
+
+textarea {
+    width: 100%;
+    height: 90%;
+    resize: none;
+    overflow: scroll;
+    word-wrap: normal;
+    font-family:Arial, Helvetica, sans-serif;
+}
+
+button {
+    width: 100px;
+    height: 30px;
+    display: block;
+    margin: 0, auto;
+}
