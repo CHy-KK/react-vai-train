@@ -5,85 +5,23 @@ import './mydiv.css'
 import reportWebVitals from './reportWebVitals';
 import datum50_5 from './data/matrixs50_5.json'
 import datum15_5 from './data/matrixs15_5.json'
-import * as d3 from 'd3'; 
-import NetV, { height, link, node, nodeLimit, width } from "netv";
-import { JuxtMatrix } from './JuxtMatrix';
-import { Bipartite } from './Bipartite'
-import { NodeLink } from './NodeLink';
 import CodeMirror from "@uiw/react-codemirror";
 import { json } from "@codemirror/lang-json";
-
-
-const GraphRender = (props) => {
-  const graphs = props.datum.matrix;
-  const num = graphs[0].nodes;
-  const leng = graphs.length;
-  const netvdivRef = useRef();
-  const graphRef = useRef();
-  const whichdiv = useCallback(() => {
-    if (props.graphLayout == 'juxtMatrix') 
-      return false;
-    return true;
-  }, [props.graphLayout])
-  useEffect(
-    () => {
-      console.log(graphRef.current)
-      if (!whichdiv())
-        return;
-      let div = netvdivRef.current;
-      while (div.hasChildNodes())
-        div.removeChild(div.firstChild);
-      if (props.graphLayout == 'juxtMatrix')
-        return;
-      let childdiv = document.createElement('div');
-      div.appendChild(childdiv);
-      
-      let netv = new NetV({ 
-        container: childdiv,
-        nodeLimit: 1000,
-        linkLimit: 3000,
-        width: 700,
-        height: 450,
-      });
-      if (props.graphLayout === 'nodelink')
-        NodeLink(netv, graphs, num, leng);
-      else if (props.graphLayout === 'bipartite')
-        Bipartite(netv, graphs, num, leng);
-        
-     
-      netv.on('zoom', () => { });
-      netv.on('pan', () => { });
-      netv.draw();
-      return () => {
-        div.removeChild(div.firstChild)
-      }
-    }, [props.graphLayout]
-  )
-
-  return (
-    <div id='render' ref={graphRef}>
-      {whichdiv() ? 
-        <div id='netvdiv' ref={netvdivRef} >
-        </div> 
-      :
-        <div id='otherdiv' height={'100%'} width={'100%'} >
-          {props.graphLayout === 'juxtMatrix' && <JuxtMatrix num={num} leng={leng} graphs={graphs} />}
-        </div>}
-    </div>
-    
-  );
-}
-
+import { GraphRender } from './GraphRender';
 
 
 const Graph = () => {
   // nodelink / matrix / bipartite / juxtMatrix
-  const graphlayoutList = ['nodelink', 'matrix', 'bipartite', 'juxtMatrix']
-  const codeRef = useRef(null);
-  const [graphLayout, setGraphLayout] = useState('juxtMatrix');
-  
+  const graphLayoutList = ['nodelink', 'matrix', 'uptriMatrix', 'downtriMatrix', 'bipartite', 'juxtMatrix']
+  const timeLayoutList = ['timeline', 'dynamic']
+  const defaultConfig = {
+    graphLayout: "uptriMatrix", 
+    timeLayout: "timeline",
+    direct: true,
+  };
+  const [config, setConfig] = useState(defaultConfig);
 
-  const code = '{"graphlayout": "juxtMatrix", "timelayout": "timeline"}';
+  const code = '{\n\t"graphLayout": "uptriMatrix",\n\t"timeLayout": "timeline",\n\t"direct": "true"\n}';
   return (
     <div id='maindiv'>
       <div id='opdiv' className='box'>
@@ -93,24 +31,33 @@ const Graph = () => {
           extensions={[json()]}
           value={code}
           onChange={(value) => {
-            let config;
             try {
-              config = JSON.parse(value);
-              if(typeof config == 'object' && config) {
-                if (graphlayoutList.includes(config.graphlayout)) {
-                  console.log('in')
-                  setGraphLayout(config.graphlayout);
-                }
+              let input = JSON.parse(value);
+              if(typeof input === 'object' && input) {
+                if (!graphLayoutList.includes(input.graphLayout))
+                  return false;
+                if (!timeLayoutList.includes(input.timeLayout))
+                  return false;
+                if (input.direct === 'true') { input.direct = true; }
+                else if (input.direct === 'false') { input.direct = false; }
+                else { return false; }
+                console.log('here2');
+
+                setConfig({
+                    graphLayout: input.graphLayout,
+                    timeLayout: input.timeLayout,
+                    direct: input.direct,
+                });
               }
             } catch(e) {
-              alert('not valid input');
+              console.log(e);
               return false;
             }
           }}
         />
       </div>
       <div id='renderdiv' className='box'>
-        <GraphRender graphLayout={graphLayout} datum={datum15_5} />
+        <GraphRender config={config} datum={datum15_5} />
       </div>
     </div>
   )

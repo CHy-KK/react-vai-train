@@ -1,10 +1,8 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import * as d3 from 'd3'; 
-import './index.css';
-import './mydiv.css'
+import '../mydiv.css'
 
 export const JuxtMatrix = (props) => {
-  console.log('JuxtMatrix')
   const gref = useRef(null);
   const graphs = props.graphs;
   const num = props.num;

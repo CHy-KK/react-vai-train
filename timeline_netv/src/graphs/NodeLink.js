@@ -1,7 +1,7 @@
 import * as d3 from 'd3'; 
 
 export function NodeLink(netv, graphs, num, leng) {
-  const shape = {width: 200, height: 200};
+  const shape = {width: 400, height: 400};
   let nodeprops, linkprops;
   let lastrecord = new Array(num);
   let record = new Array(num).fill(0);  // -1: disappear, 1: current, 2: appear
@@ -22,7 +22,7 @@ export function NodeLink(netv, graphs, num, leng) {
     })
     let nodepos = JSON.parse(JSON.stringify(nodes));
     d3.forceSimulation(nodepos)
-      .force('charge', d3.forceManyBody().strength(-1000))   
+      .force('charge', d3.forceManyBody().strength(-10))   
       .force('center', d3.forceCenter(shape.width / 2, shape.height / 2));
     nodepos.map((d, idx) => {
       nodeprops.push({ 
